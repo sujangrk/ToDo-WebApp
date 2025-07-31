@@ -223,3 +223,25 @@ def task_statistics(request):
     }
     
     return render(request, 'todo/task_statistics.html', context)
+
+
+def quick_search(request):
+    """Quick search for tasks with AJAX support"""
+    query = request.GET.get('q', '')
+    if not query:
+        return redirect('todo:task_list')
+    
+    tasks = Task.objects.filter(
+        Q(title__icontains=query) |
+        Q(description__icontains=query) |
+        Q(category__icontains=query) |
+        Q(priority__icontains=query)
+    ).order_by('-priority', 'due_date', '-created_at')
+    
+    context = {
+        'tasks': tasks,
+        'search_query': query,
+        'results_count': tasks.count(),
+    }
+    
+    return render(request, 'todo/quick_search.html', context)
