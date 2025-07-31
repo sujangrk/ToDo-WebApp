@@ -175,3 +175,51 @@ def export_tasks_csv(request):
         ])
     
     return response
+
+
+def task_statistics(request):
+    """Display detailed task statistics and analytics"""
+    from django.db.models import Count, Q
+    from datetime import timedelta
+    
+    # Basic counts
+    total_tasks = Task.objects.count()
+    completed_tasks = Task.objects.filter(completed=True).count()
+    pending_tasks = Task.objects.filter(completed=False).count()
+    overdue_tasks = Task.objects.filter(
+        Q(due_date__lt=timezone.now()) & Q(completed=False)
+    ).count()
+    
+    # Completion rate
+    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+    
+    # Priority distribution
+    priority_stats = Task.objects.values('priority').annotate(count=Count('priority'))
+    priority_data = {item['priority']: item['count'] for item in priority_stats}
+    
+    # Category distribution
+    category_stats = Task.objects.values('category').annotate(count=Count('category'))
+    category_data = {item['category']: item['count'] for item in category_stats}
+    
+    # Recent activity (last 7 days)
+    week_ago = timezone.now() - timedelta(days=7)
+    recent_tasks = Task.objects.filter(created_at__gte=week_ago).count()
+    
+    # Tasks by status and priority
+    urgent_pending = Task.objects.filter(priority='urgent', completed=False).count()
+    high_pending = Task.objects.filter(priority='high', completed=False).count()
+    
+    context = {
+        'total_tasks': total_tasks,
+        'completed_tasks': completed_tasks,
+        'pending_tasks': pending_tasks,
+        'overdue_tasks': overdue_tasks,
+        'completion_rate': round(completion_rate, 1),
+        'priority_data': priority_data,
+        'category_data': category_data,
+        'recent_tasks': recent_tasks,
+        'urgent_pending': urgent_pending,
+        'high_pending': high_pending,
+    }
+    
+    return render(request, 'todo/task_statistics.html', context)
