@@ -10,4 +10,5 @@ urlpatterns = [
     path('delete/<int:pk>/', views.task_delete, name='task_delete'),
     path('toggle/<int:pk>/', views.task_toggle, name='task_toggle'),
     path('bulk-action/', views.task_bulk_action, name='task_bulk_action'),
+    path('export/', views.export_tasks_csv, name='export_tasks_csv'),
 ] 

@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
+from django.http import HttpResponse
 from datetime import datetime
+import csv
 from .models import Task
 from .forms import TaskForm
 
@@ -146,3 +148,30 @@ def task_bulk_action(request):
                 messages.success(request, f'{count} tasks deleted successfully!')
     
     return redirect('todo:task_list')
+
+
+def export_tasks_csv(request):
+    """Export tasks to CSV format"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="tasks.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['Title', 'Description', 'Status', 'Priority', 'Category', 'Due Date', 'Created At'])
+    
+    tasks = Task.objects.all()
+    for task in tasks:
+        status = 'Completed' if task.completed else 'Pending'
+        due_date = task.due_date.strftime('%Y-%m-%d %H:%M') if task.due_date else 'No due date'
+        created_at = task.created_at.strftime('%Y-%m-%d %H:%M')
+        
+        writer.writerow([
+            task.title,
+            task.description or '',
+            status,
+            task.get_priority_display(),
+            task.get_category_display(),
+            due_date,
+            created_at
+        ])
+    
+    return response
