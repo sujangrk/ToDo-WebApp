@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}Task List - DevTask Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="text-white mb-4">
+            <i class="bi bi-list-task me-2"></i>My Tasks
+        </h1>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3>{{ tasks.count }}</h3>
+            <p class="mb-0">Total Tasks</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3>{{ pending_count }}</h3>
+            <p class="mb-0">Pending</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3>{{ completed_count }}</h3>
+            <p class="mb-0">Completed</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card text-center">
+            <h3>{{ urgent_count }}</h3>
+            <p class="mb-0">Urgent</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section">
+    <form method="get" class="row g-3">
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" class="form-control" id="search" name="search" 
+                   value="{{ search_query }}" placeholder="Search tasks...">
+        </div>
+        <div class="col-md-2">
+            <label for="filter" class="form-label">Status</label>
+            <select class="form-select" id="filter" name="filter">
+                <option value="">All Tasks</option>
+                <option value="pending" {% if current_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="completed" {% if current_filter == 'completed' %}selected{% endif %}>Completed</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="category" class="form-label">Category</label>
+            <select class="form-select" id="category" name="category">
+                <option value="">All Categories</option>
+                {% for value, label in categories %}
+                    <option value="{{ value }}" {% if current_category == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="priority" class="form-label">Priority</label>
+            <select class="form-select" id="priority" name="priority">
+                <option value="">All Priorities</option>
+                {% for value, label in priorities %}
+                    <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="sort" class="form-label">Sort By</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="priority" {% if current_sort == 'priority' %}selected{% endif %}>Priority</option>
+                <option value="due_date" {% if current_sort == 'due_date' %}selected{% endif %}>Due Date</option>
+                <option value="created" {% if current_sort == 'created' %}selected{% endif %}>Created</option>
+                <option value="title" {% if current_sort == 'title' %}selected{% endif %}>Title</option>
+            </select>
+        </div>
+        <div class="col-md-1">
+            <label class="form-label">&nbsp;</label>
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Tasks List -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>Tasks ({{ tasks.count }})
+        </h5>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="selectAll()">
+                <i class="bi bi-check-all me-1"></i>Select All
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAll()">
+                <i class="bi bi-x-circle me-1"></i>Deselect All
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if tasks %}
+            <form method="post" action="{% url 'todo:task_bulk_action' %}">
+                {% csrf_token %}
+                <div class="row mb-3">
+                    <div class="col">
+                        <select name="action" class="form-select form-select-sm d-inline-block w-auto me-2">
+                            <option value="">Bulk Actions</option>
+                            <option value="complete">Mark as Complete</option>
+                            <option value="delete">Delete Selected</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Are you sure?')">
+                            <i class="bi bi-play me-1"></i>Apply
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    {% for task in tasks %}
+                        <div class="col-12 mb-3">
+                            <div class="card task-item {% if task.completed %}completed{% endif %} {{ task.priority }}">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-auto">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="task_ids" 
+                                                       value="{{ task.id }}" id="task_{{ task.id }}">
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="card-title mb-1 {% if task.completed %}text-decoration-line-through{% endif %}">
+                                                        {{ task.title }}
+                                                    </h6>
+                                                    {% if task.description %}
+                                                        <p class="card-text text-muted small mb-2">{{ task.description }}</p>
+                                                    {% endif %}
+                                                    <div class="d-flex flex-wrap gap-2">
+                                                        <span class="badge priority-badge bg-{% if task.priority == 'urgent' %}danger{% elif task.priority == 'high' %}warning{% elif task.priority == 'medium' %}info{% else %}success{% endif %}">
+                                                            {{ task.priority_emoji }} {{ task.get_priority_display }}
+                                                        </span>
+                                                        <span class="badge category-badge bg-secondary">
+                                                            {{ task.category_emoji }} {{ task.get_category_display }}
+                                                        </span>
+                                                        {% if task.due_date %}
+                                                            <span class="badge bg-{% if task.is_overdue %}danger{% else %}primary{% endif %}">
+                                                                <i class="bi bi-calendar me-1"></i>
+                                                                {{ task.due_date|date:"M d, Y H:i" }}
+                                                                {% if task.is_overdue %} (Overdue){% endif %}
+                                                            </span>
+                                                        {% endif %}
+                                                        <span class="badge bg-light text-dark">
+                                                            <i class="bi bi-clock me-1"></i>
+                                                            {{ task.created_at|date:"M d, Y" }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div class="btn-group btn-group-sm ms-2">
+                                                    <a href="{% url 'todo:task_toggle' task.id %}" 
+                                                       class="btn btn-{% if task.completed %}warning{% else %}success{% endif %} btn-sm"
+                                                       title="{% if task.completed %}Mark as pending{% else %}Mark as complete{% endif %}">
+                                                        <i class="bi bi-{% if task.completed %}arrow-counterclockwise{% else %}check-lg{% endif %}"></i>
+                                                    </a>
+                                                    <a href="{% url 'todo:task_update' task.id %}" 
+                                                       class="btn btn-primary btn-sm" title="Edit">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </a>
+                                                    <a href="{% url 'todo:task_delete' task.id %}" 
+                                                       class="btn btn-danger btn-sm" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </form>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox display-1 text-muted"></i>
+                <h4 class="text-muted mt-3">No tasks found</h4>
+                <p class="text-muted">Create your first task to get started!</p>
+                <a href="{% url 'todo:task_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Create First Task
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Floating Action Button -->
+<a href="{% url 'todo:task_create' %}" class="btn btn-primary btn-floating">
+    <i class="bi bi-plus"></i>
+</a>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function selectAll() {
+        document.querySelectorAll('input[name="task_ids"]').forEach(checkbox => {
+            checkbox.checked = true;
+        });
+    }
+    
+    function deselectAll() {
+        document.querySelectorAll('input[name="task_ids"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
+    
+    // Auto-submit filters on change
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterSelects = document.querySelectorAll('select[name="filter"], select[name="category"], select[name="priority"], select[name="sort"]');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
+    });
+</script>
+{% endblock %} 

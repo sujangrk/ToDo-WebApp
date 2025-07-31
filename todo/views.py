@@ -1,0 +1,148 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Q
+from django.utils import timezone
+from datetime import datetime
+from .models import Task
+from .forms import TaskForm
+
+
+def task_list(request):
+    """Main view for displaying and filtering tasks"""
+    tasks = Task.objects.all()
+    
+    # Filtering
+    filter_completed = request.GET.get('filter')
+    if filter_completed == 'completed':
+        tasks = tasks.filter(completed=True)
+    elif filter_completed == 'pending':
+        tasks = tasks.filter(completed=False)
+    
+    # Category filter
+    category_filter = request.GET.get('category')
+    if category_filter:
+        tasks = tasks.filter(category=category_filter)
+    
+    # Priority filter
+    priority_filter = request.GET.get('priority')
+    if priority_filter:
+        tasks = tasks.filter(priority=priority_filter)
+    
+    # Search functionality
+    search_query = request.GET.get('search')
+    if search_query:
+        tasks = tasks.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    # Sort options
+    sort_by = request.GET.get('sort', 'priority')
+    if sort_by == 'due_date':
+        tasks = tasks.order_by('due_date', '-created_at')
+    elif sort_by == 'created':
+        tasks = tasks.order_by('-created_at')
+    elif sort_by == 'title':
+        tasks = tasks.order_by('title')
+    else:
+        tasks = tasks.order_by('-priority', 'due_date', '-created_at')
+    
+    # Calculate statistics
+    pending_count = Task.objects.filter(completed=False).count()
+    completed_count = Task.objects.filter(completed=True).count()
+    urgent_count = Task.objects.filter(priority='urgent').count()
+    
+    context = {
+        'tasks': tasks,
+        'categories': Task.CATEGORY_CHOICES,
+        'priorities': Task.PRIORITY_CHOICES,
+        'current_filter': filter_completed,
+        'current_category': category_filter,
+        'current_priority': priority_filter,
+        'current_sort': sort_by,
+        'search_query': search_query,
+        'pending_count': pending_count,
+        'completed_count': completed_count,
+        'urgent_count': urgent_count,
+    }
+    
+    return render(request, 'todo/task_list.html', context)
+
+
+def task_create(request):
+    """Create a new task"""
+    if request.method == 'POST':
+        form = TaskForm(request.POST)
+        if form.is_valid():
+            task = form.save()
+            messages.success(request, f'Task "{task.title}" created successfully!')
+            return redirect('todo:task_list')
+    else:
+        form = TaskForm()
+    
+    return render(request, 'todo/task_form.html', {'form': form, 'action': 'Create'})
+
+
+def task_update(request, pk):
+    """Update an existing task"""
+    task = get_object_or_404(Task, pk=pk)
+    
+    if request.method == 'POST':
+        form = TaskForm(request.POST, instance=task)
+        if form.is_valid():
+            task = form.save()
+            messages.success(request, f'Task "{task.title}" updated successfully!')
+            return redirect('todo:task_list')
+    else:
+        form = TaskForm(instance=task)
+    
+    return render(request, 'todo/task_form.html', {
+        'form': form, 
+        'task': task, 
+        'action': 'Update'
+    })
+
+
+def task_delete(request, pk):
+    """Delete a task"""
+    task = get_object_or_404(Task, pk=pk)
+    
+    if request.method == 'POST':
+        task_title = task.title
+        task.delete()
+        messages.success(request, f'Task "{task_title}" deleted successfully!')
+        return redirect('todo:task_list')
+    
+    return render(request, 'todo/task_confirm_delete.html', {'task': task})
+
+
+def task_toggle(request, pk):
+    """Toggle task completion status"""
+    task = get_object_or_404(Task, pk=pk)
+    task.completed = not task.completed
+    task.save()
+    
+    status = "completed" if task.completed else "marked as pending"
+    messages.success(request, f'Task "{task.title}" {status}!')
+    
+    return redirect('todo:task_list')
+
+
+def task_bulk_action(request):
+    """Handle bulk actions on tasks"""
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        task_ids = request.POST.getlist('task_ids')
+        
+        if action and task_ids:
+            tasks = Task.objects.filter(id__in=task_ids)
+            
+            if action == 'complete':
+                tasks.update(completed=True)
+                messages.success(request, f'{len(tasks)} tasks marked as completed!')
+            elif action == 'delete':
+                count = len(tasks)
+                tasks.delete()
+                messages.success(request, f'{count} tasks deleted successfully!')
+    
+    return redirect('todo:task_list')
