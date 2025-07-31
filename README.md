@@ -15,11 +15,12 @@ A modern, feature-rich to-do application built with Django for developers who ne
 - 🎯 **Priority levels** with emoji indicators (Urgent 🔴, High 🟠, Medium 🟡, Low 🟢)
 - 📂 **Categories** with emoji icons (Work 💼, Personal 👤, Shopping 🛒, Health 🏥, Learning 📚, Other 📝)
 - 📅 **Due dates** with overdue detection
-- 🔍 **Search functionality** across task titles and descriptions
+- 🔍 **Advanced search functionality** with dedicated results page
 - 🎛️ **Advanced filtering** by status, category, and priority
 - 📊 **Sorting options** by priority, due date, creation date, or title
 - 📦 **Bulk actions** for completing or deleting multiple tasks
-- 📈 **Statistics dashboard** showing task counts and progress
+- 📈 **Comprehensive statistics dashboard** with analytics and insights
+- 📤 **CSV export functionality** for data portability
 - 🎨 **Dark mode aesthetic** with gradient backgrounds and glass-morphism effects
 
 ## 🛠️ Tech Stack
@@ -89,11 +90,17 @@ python manage.py runserver
 - **Bulk Actions**: Select multiple tasks and apply actions
 
 ### Filtering & Searching
-- **Search**: Use the search box to find tasks by title or description
+- **Search**: Use the search box to find tasks by title, description, category, or priority
+- **Quick Search**: Access dedicated search page for advanced filtering
 - **Status Filter**: Show all, pending, or completed tasks
 - **Category Filter**: Filter by task category
 - **Priority Filter**: Show tasks by priority level
 - **Sort**: Arrange tasks by priority, due date, creation date, or title
+
+### Analytics & Export
+- **Statistics Dashboard**: View detailed analytics including completion rates, priority distribution, and overdue tasks
+- **CSV Export**: Download all task data in CSV format for external analysis
+- **Real-time Updates**: Statistics update automatically as tasks are modified
 
 ## 🏗️ Project Structure
 
